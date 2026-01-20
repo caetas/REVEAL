@@ -87,6 +87,9 @@ target/
 # Secrets
 .secrets
 
+src/dit/wandb/
+src/jit/wandb/
+
 # Database
 *.db
 *.rdb
@@ -120,6 +123,7 @@ notebook/.ipynb_checkpoints
 data/processed
 data/interim
 data/external
+data/raw
 # models directory
 /models/
 # test data directory

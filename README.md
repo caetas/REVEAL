@@ -17,6 +17,19 @@ You will need:
 - load environment variables from `.env`
 - `Weights & Biases` account
 
+## Extract Features
+
+    uv run accelerate launch --mixed_precision=bf16 train_iREPA.py \
+        --feature_extractor \
+        --dataset gastronet \
+        --img_size 256 \
+        --model SiT-B/2 \
+        --class_num 0  \
+        --batch_size 200 \
+        --num_workers 64 \
+        --vae SD2 \
+        --checkpoint ./../../models/iREPA/SD2_gastro_120k_gastronet.pt
+
 ## Installation
 
 Clone this repository (requires git ssh keys)
