@@ -1098,7 +1098,7 @@ class DenoiserREPA(nn.Module):
 
                 t_batch = torch.ones(x.size(0), device=device) * t
 
-                features = self.model.forward_features(x, t_batch, torch.ones(x.size(0), device=device)*self.num_classes, encoder_depths=depths)
+                features = self.model.forward_features(x, t_batch, torch.ones(x.size(0), device=device, dtype=torch.long)*self.num_classes, encoder_depths=depths)
 
-                all_features.append(features.cpu().float())
+                all_features.append(features[0].cpu().float())
                 all_labels.append(label.cpu())
