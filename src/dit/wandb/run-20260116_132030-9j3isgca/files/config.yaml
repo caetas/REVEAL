@@ -1,0 +1,163 @@
+_wandb:
+    value:
+        cli_version: 0.23.1
+        e:
+            mq6b9v550aphycmt1twbvpj0a20asgqd:
+                args:
+                    - --train
+                    - --img_size
+                    - "256"
+                    - --model
+                    - SiT-B/2
+                    - --class_num
+                    - "0"
+                    - --batch_size
+                    - "4"
+                    - --enc_type
+                    - dinov3-vit-b16
+                codePath: src/dit/train_iREPA.py
+                codePathLocal: train_iREPA.py
+                cpu_count: 8
+                cpu_count_logical: 16
+                cudaVersion: "13.1"
+                disk:
+                    /:
+                        total: "1081101176832"
+                        used: "121915482112"
+                email: f.t.de.espirito.santo.e.caetano@tue.nl
+                executable: /home/ocaetas/gastrae/.venv/bin/python3
+                git:
+                    commit: 6c36e7c5e09bd2400176c1aa7130de55fe59e9c2
+                    remote: git@github.com:caetas/GastRAE.git
+                gpu: NVIDIA GeForce RTX 4070 Laptop GPU
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ada
+                      memoryTotal: "8585740288"
+                      name: NVIDIA GeForce RTX 4070 Laptop GPU
+                      uuid: GPU-eac2fb9d-d5aa-b938-59be-8d7183f2a614
+                host: TUE039509
+                memory:
+                    total: "16393637888"
+                os: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39
+                program: /home/ocaetas/gastrae/src/dit/train_iREPA.py
+                python: CPython 3.14.0
+                root: /home/ocaetas/gastrae/src/dit
+                startedAt: "2026-01-16T12:20:30.162610Z"
+                writerId: mq6b9v550aphycmt1twbvpj0a20asgqd
+        m: []
+        python_version: 3.14.0
+        t:
+            "1":
+                - 1
+                - 11
+                - 41
+                - 49
+                - 63
+                - 71
+                - 83
+            "2":
+                - 1
+                - 11
+                - 41
+                - 49
+                - 63
+                - 71
+                - 83
+            "3":
+                - 13
+            "4": 3.14.0
+            "5": 0.23.1
+            "6": 4.57.3
+            "12": 0.23.1
+            "13": linux-x86_64
+P_mean:
+    value: -0.8
+P_std:
+    value: 0.8
+batch_size:
+    value: 4
+cfg:
+    value: 2.9
+checkpoint:
+    value: null
+class_num:
+    value: 0
+cls_token_weight:
+    value: 0.2
+dataset:
+    value: gastronet
+ema_decay:
+    value: 0.9999
+enc_ckpt_path:
+    value: null
+enc_type:
+    value: dinov3-vit-b16
+encoder_depth:
+    value: 8
+fid:
+    value: false
+final_lr:
+    value: 1e-06
+fused_attn:
+    value: true
+gradient_accumulation_steps:
+    value: 1
+img_size:
+    value: 256
+interval_max:
+    value: 1
+interval_min:
+    value: 0.1
+label_drop_prob:
+    value: 0.1
+lr:
+    value: 0.0001
+max_grad_norm:
+    value: 1
+model:
+    value: SiT-B/2
+n_epochs:
+    value: 100
+no_wandb:
+    value: false
+num_samples:
+    value: 16
+num_sampling_steps:
+    value: 50
+num_workers:
+    value: 0
+proj_coeff:
+    value: "1.0"
+proj_kwargs_kernel_size:
+    value: 1
+projection_layer_type:
+    value: conv
+projection_loss_type:
+    value: cosine
+qk_norm:
+    value: false
+repa_loss:
+    value: true
+sample:
+    value: false
+sample_and_save_freq:
+    value: 50
+sampling_method:
+    value: euler
+snapshot:
+    value: 10
+spnorm_method:
+    value: zscore
+t_eps:
+    value: 1e-05
+train:
+    value: true
+vae:
+    value: SD2
+weight_decay:
+    value: 0
+zscore_alpha:
+    value: 0.6
+zscore_proj_skip_std:
+    value: false
