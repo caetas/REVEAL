@@ -893,7 +893,7 @@ class DenoiserREPA(nn.Module):
         :param verbose: bool, whether to display progress bar
         '''
         appendix = self.args.enc_ckpt_path.split('/')[-1].replace('.pth', '') if self.args.enc_ckpt_path is not None else self.args.enc_type
-        accelerator = accelerate.Accelerator(log_with="wandb")
+        accelerator = accelerate.Accelerator(log_with="wandb", gradient_accumulation_steps=self.args.gradient_accumulation_steps)
         if not self.no_wandb:
             accelerator.init_trackers("iREPA", config=self.args, init_kwargs={"wandb": {"name": f"{self.args.vae}_{appendix}_{self.args.model}_{self.dataset}"}})
         create_checkpoint_dir()
@@ -939,60 +939,61 @@ class DenoiserREPA(nn.Module):
             train_loss_vel = 0
             train_loss_proj = 0
             for (x, cond) in tqdm(train_loader, desc='Batches', leave=False):
-                #x = x.to(self.device)
-                #cond = cond.to(self.device)
+                with accelerator.accumulate(self.model):
+                    #x = x.to(self.device)
+                    #cond = cond.to(self.device)
 
-                with torch.no_grad():
-                    zs = []
+                    with torch.no_grad():
+                        zs = []
+
+                        with accelerator.autocast():
+                            for encoder in self.encoders:
+                                encoder.eval()
+
+                                raw_image_ = encoder.preprocess(x*127.5 + 127.5)
+
+                                features = encoder.forward_features(raw_image_)
+
+                                # normalize spatial features
+                                spnorm_kwargs = {
+                                    'feat': features['x_norm_patchtokens'],
+                                    'cls': features['x_norm_clstoken'],
+                                    'cls_weight': self.args.cls_token_weight,
+                                    'zscore_alpha': self.args.zscore_alpha,
+                                    'zscore_proj_skip_std': self.args.zscore_proj_skip_std,
+                                }
+                                z = spnorm(**spnorm_kwargs)
+
+                                # append to list
+                                zs.append(z)
 
                     with accelerator.autocast():
-                        for encoder in self.encoders:
-                            encoder.eval()
 
-                            raw_image_ = encoder.preprocess(x*127.5 + 127.5)
+                        if self.vae is not None:
+                            with torch.no_grad():
+                                # if x has one channel, make it 3 channels
+                                if x.shape[1] == 1:
+                                    x = torch.cat((x, x, x), dim=1)
+                                x = self.encode(x)
 
-                            features = encoder.forward_features(raw_image_)
+                        optimizer.zero_grad()
 
-                            # normalize spatial features
-                            spnorm_kwargs = {
-                                'feat': features['x_norm_patchtokens'],
-                                'cls': features['x_norm_clstoken'],
-                                'cls_weight': self.args.cls_token_weight,
-                                'zscore_alpha': self.args.zscore_alpha,
-                                'zscore_proj_skip_std': self.args.zscore_proj_skip_std,
-                            }
-                            z = spnorm(**spnorm_kwargs)
+                        model_kwargs = dict(y=cond)
+                        loss, proj_loss, loss_dict = loss_fn(self.model, x, model_kwargs, zs=zs)
+                        loss_mean = loss.mean()
+                        proj_loss_mean = proj_loss.mean()
+                        loss = loss_mean + proj_loss_mean
 
-                            # append to list
-                            zs.append(z)
+                        accelerator.backward(loss)
+                        if accelerator.sync_gradients:
+                            params_to_clip = self.model.parameters()
+                            grad_norm = accelerator.clip_grad_norm_(params_to_clip, self.args.max_grad_norm)
+                    optimizer.step()
+                    scheduler.step()
 
-                with accelerator.autocast():
-
-                    if self.vae is not None:
-                        with torch.no_grad():
-                            # if x has one channel, make it 3 channels
-                            if x.shape[1] == 1:
-                                x = torch.cat((x, x, x), dim=1)
-                            x = self.encode(x)
-
-                    optimizer.zero_grad()
-
-                    model_kwargs = dict(y=cond)
-                    loss, proj_loss, loss_dict = loss_fn(self.model, x, model_kwargs, zs=zs)
-                    loss_mean = loss.mean()
-                    proj_loss_mean = proj_loss.mean()
-                    loss = loss_mean + proj_loss_mean
-
-                    accelerator.backward(loss)
-                    if accelerator.sync_gradients:
-                        params_to_clip = self.model.parameters()
-                        grad_norm = accelerator.clip_grad_norm_(params_to_clip, self.args.max_grad_norm)
-                optimizer.step()
-                scheduler.step()
-
-                train_loss += loss.item()*x.shape[0]
-                train_loss_vel += loss_mean.item()*x.shape[0]
-                train_loss_proj += proj_loss_mean.item()*x.shape[0]
+                    train_loss += loss.item()*x.shape[0]
+                    train_loss_vel += loss_mean.item()*x.shape[0]
+                    train_loss_proj += proj_loss_mean.item()*x.shape[0]
                 if accelerator.sync_gradients:
                     update_ema(self.ema, self.model, self.ema_decay)
 
@@ -1069,36 +1070,4 @@ class DenoiserREPA(nn.Module):
                     os.path.join(fid_dir, f"{idx:05d}.png"),
                     samples[j].permute(1, 2, 0).cpu().numpy()
                 )
-
-    @torch.no_grad()
-    def feature_extractor(self, dataloader, t=1.0, depths=[8]):
-        '''
-        Extract features from the model
-        :param dataloader: PyTorch DataLoader object
-        :param t: diffusion timestep (from 0.0 to 1.0, default 1.0 i.e., clean input)
-        :param depths: list of encoder depths to extract features from
-        :return: features and labels
-        '''
-        self.model.eval()
-        self.vae.eval()
-        accelerator = accelerate.Accelerator()
-        self.model, self.vae, dataloader = accelerator.prepare(self.model, self.vae, dataloader)
-        device = accelerator.device
-        all_features = []
-        all_labels = []
-
-        for (x, label) in tqdm(dataloader, desc="Feature Extraction", leave=False):
-
-            with torch.no_grad():
-                if self.vae is not None:
-                    # if x has one channel, make it 3 channels
-                    if x.shape[1] == 1:
-                        x = torch.cat((x, x, x), dim=1)
-                    x = self.encode(x)
-
-                t_batch = torch.ones(x.size(0), device=device) * t
-
-                features = self.model.forward_features(x, t_batch, torch.ones(x.size(0), device=device, dtype=torch.long)*self.num_classes, encoder_depths=depths)
-
-                all_features.append(features[0].cpu().float())
-                all_labels.append(label.cpu())
+                
