@@ -187,20 +187,58 @@ class DINOEncoder(VisionEncoder):
 class DINOv2Encoder(VisionEncoder):
     """DINOv2 encoder implementation"""
     
-    def load_model(self):
+    def load_model(self, checkpoint_path: Optional[str] = None):
         import timm
+        from .dinov2.models.vision_transformer import DinoVisionTransformer as VisionTransformer
+        from functools import partial
+        from .dinov2.layers import MemEffAttention, NestedTensorBlock as Block
         
         # Determine if using register tokens
         use_reg = 'reg' in self.encoder_type
-        
         # Load model from torch hub
         model_name = f'dinov2_vit{self.model_config}14{"_reg" if use_reg else ""}'
-        
-        if self.accelerator is not None:
-            with self.accelerator.main_process_first():
+
+        if checkpoint_path is None:
+            if self.accelerator is not None:
+                with self.accelerator.main_process_first():
+                    self.model = torch.hub.load('facebookresearch/dinov2', model_name)
+            else:
                 self.model = torch.hub.load('facebookresearch/dinov2', model_name)
+
         else:
-            self.model = torch.hub.load('facebookresearch/dinov2', model_name)
+            if self.accelerator is not None:
+                with self.accelerator.main_process_first():
+                    self.model = VisionTransformer(
+                        img_size=336,
+                        patch_size=14,
+                        in_chans=3,
+                        embed_dim=768,
+                        depth=12,
+                        num_heads=12,
+                        mlp_ratio=4,
+                        block_fn=partial(Block, attn_class=MemEffAttention),
+                        num_register_tokens=1 if use_reg else 0,
+                        block_chunks=0,
+                        init_values=1e-5,
+                    )
+                    state_dict = torch.load(checkpoint_path, map_location='cpu')
+                    self.model.load_state_dict(state_dict)
+            else:
+                self.model = VisionTransformer(
+                    img_size=336,
+                    patch_size=14,
+                    in_chans=3,
+                    embed_dim=768,
+                    depth=12,
+                    num_heads=12,
+                    mlp_ratio=4,
+                    block_fn=partial(Block, attn_class=MemEffAttention),
+                    num_register_tokens=1 if use_reg else 0,
+                    block_chunks=0,
+                    init_values=1e-5,
+                )
+                state_dict = torch.load(checkpoint_path, map_location='cpu')
+                self.model.load_state_dict(state_dict)
         
         # Remove head
         del self.model.head
