@@ -139,6 +139,7 @@ test/data
 # Vim
 *.swp
 *.swo
+.ruff_cache/
 
 # Mypy
 .mypy_cache/
