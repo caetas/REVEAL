@@ -72,7 +72,7 @@ Then run the script [`job_apptainer.sh`](scripts/job_apptainer.sh) that will exe
 
 To access the shell, please run:
 
-    apptainer shell --nv --env-file .env --bind $(pwd)/:/app/ symmflow.sif
+    apptainer shell --nv --env-file .env --bind $(pwd)/:/app/ reveal.sif
 
 **Add the flag `--nvccli` if you are using WSL.**
 
