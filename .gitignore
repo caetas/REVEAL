@@ -125,7 +125,7 @@ data/interim
 data/external
 data/raw
 # models directory
-/models/
+/models/*/*.pt
 # test data directory
 test/data
 
