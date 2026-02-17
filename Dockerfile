@@ -1,13 +1,19 @@
-FROM nvcr.io/nvidia/pytorch:24.12-py3
+FROM nvidia/cuda:12.8.0-cudnn-devel-ubuntu22.04
 
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y \
+	git \
+	python3 \
+	python3-pip \
+	&& rm -rf /var/lib/apt/lists/*
 
-COPY requirements/requirements_docker.txt /app/requirements/
-RUN pip install -r /app/requirements/requirements_docker.txt
+RUN python3 -m pip install --no-cache-dir uv
+
+WORKDIR /app/
+
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --frozen --no-dev --no-install-project
 RUN mkdir /app/data
 RUN mkdir /app/src
 RUN mkdir /app/models
-
-WORKDIR /app/
 
 ENV PYTHONPATH="${PYTHONPATH}:/app/src/reveal"
