@@ -11,7 +11,7 @@ RUN python3 -m pip install --no-cache-dir uv
 WORKDIR /app/
 
 COPY pyproject.toml uv.lock /app/
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project --python 3.12
 RUN mkdir /app/data
 RUN mkdir /app/src
 RUN mkdir /app/models
