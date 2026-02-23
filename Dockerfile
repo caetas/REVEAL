@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
 RUN python3 -m pip install --no-cache-dir uv
 
 WORKDIR /app/
+ENV UV_PROJECT_ENVIRONMENT="/opt/venv"
 
 COPY pyproject.toml uv.lock /app/
 RUN uv sync --frozen --no-dev --no-install-project --python 3.12
