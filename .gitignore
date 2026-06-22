@@ -123,7 +123,7 @@ notebook/.ipynb_checkpoints
 data/processed
 data/interim
 data/external
-data/raw
+data/raw/*
 # models directory
 /models/*/*.pt
 # test data directory
