@@ -3,7 +3,7 @@
 ![uv](https://img.shields.io/badge/uv-%23DE5FE9.svg?style=for-the-badge&logo=uv&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-## [ECCV DCA-MI 2026] - REVEAL
+## [DCA-MI 2026 (ECCV 2026)] - REVEAL
 
 <p align="center">
   <img src="imgs/reveal.png" width="100%" alt='Generated samples.'>
@@ -151,4 +151,4 @@ If you use this codebase, please cite:
 
 ## License
 
-This project is licensed under the terms of the MIT license. See [LICENSE](LICENSE).
+This project is licensed under the terms of a custom license. See [LICENSE](LICENSE).
