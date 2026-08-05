@@ -3,7 +3,7 @@
 ![uv](https://img.shields.io/badge/uv-%23DE5FE9.svg?style=for-the-badge&logo=uv&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-## REVEAL
+## [ECCV DCA-MI 2026] - REVEAL
 
 <p align="center">
   <img src="imgs/reveal.png" width="100%" alt='Generated samples.'>
@@ -82,7 +82,7 @@ To access the shell, please run:
 
 ### Dataset Download
 
-The full dataset can be download [`here`](https://cortex.thetavision.nl/dataset-provider/listing/1/).
+The full dataset can be downloaded [`here`](https://cortex.thetavision.nl/dataset-provider/listing/1/).
 
 ### Pretrained Encoders
 
@@ -119,7 +119,7 @@ uv run accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 iR
 
 ### 1) Download pretrained weights
 
-The folder containing the pretrained weights of the models used in the paper can be downloaded [`here`](https://huggingface.co/ocaetas/).
+The folder containing the pretrained weights of the models used in the paper can be downloaded [`here`](https://huggingface.co/ocaetas/REVEAL).
 
 ### 2) Run sampling with iREPA
 
