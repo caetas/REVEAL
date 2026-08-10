@@ -10,7 +10,7 @@
 </p>
 
 The official implementation of [**Representation-driven Endoscopic Visual
-Embedding Alignment for Latent Generation**]().
+Embedding Alignment for Latent Generation**](https://arxiv.org/abs/2608.07176).
 
 **[Francisco Caetano](https://caetas.github.io)<sup>1</sup>, [Tim J.M. Jaspers](https://scholar.google.com/citations?user=nwfiV2wAAAAJ&hl=en&oi=ao)<sup>1</sup>, [Haiko Middeljans](https://scholar.google.com/citations?user=c4t8jsQAAAAJ&hl=en&oi=ao)<sup>1</sup>, [Martijn R. Jong](https://scholar.google.com/citations?user=QRNrL-oAAAAJ&hl=en&oi=ao)<sup>2</sup>, [Rixta A.H. van Eijck van Heslinga](https://pure.amsterdamumc.nl/en/persons/rixta-van-eijck-van-heslinga/)<sup>2</sup>, [Floor Slooter](https://amsterdamumc.org/en/research/researchers/floor-slooter.htm)<sup>2</sup>, [Albert Jeroen de Groof](https://scholar.google.com/citations?user=nT3VfE4AAAAJ&hl=en&oi=ao)<sup>2</sup>, [Jacques J. Bergman](https://scholar.google.com/citations?user=4SFBE0IAAAAJ&hl=en&oi=ao)<sup>2</sup>, [Peter H.N. de With](https://www.tue.nl/en/research/researchers/peter-de-with)<sup>1</sup>, [Fons van der Sommen](https://scholar.google.com/citations?user=qFiLkCAAAAAJ&hl=en&oi=ao)<sup>1</sup>**
 
@@ -141,11 +141,14 @@ uv run accelerate launch --mixed_precision=bf16 iREPA.py \
 If you use this codebase, please cite:
 
 ```bibtex
-@inproceedings{TODO,
-  title={TODO},
-  author={TODO},
-  booktitle={MICCAI},
-  year={TODO}
+@misc{caetano2026representation,
+      title={Representation-driven Endoscopic Visual Embedding Alignment for Latent Generation}, 
+      author={Francisco Caetano and Tim J. M. Jaspers and Haiko Middeljans and Martijn R. Jong and Rixta A. H. van Eijck van Heslinga and Floor Slooter and Albert J. de Groof and Jacques J. Bergman and Peter H. N. De With and Fons van der Sommen},
+      year={2026},
+      eprint={2608.07176},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2608.07176}, 
 }
 ```
 
