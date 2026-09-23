@@ -26,7 +26,9 @@ Developing foundation generative models for endoscopy is limited by the gap betw
 - `src/dit/`: SiT and iREPA training/sampling entrypoints
 - `src/jit/`: JiT training/sampling entrypoints
 - `data/raw/GastroNet-5M/`: dataset location expected by dataloaders
+- `data/raw/RARE25-train-data/`: labelled RARE25 training data (`<center>/{ndbe,neo}/*.png`) for fine-tuning
 - `models/iREPA/`: iREPA checkpoints (includes one example checkpoint)
+- `models/iREPA_rare/`: checkpoints of iREPA fine-tuned on RARE25
 - `models/pretrained_models/`: pretrained encoder/model checkpoints
 
 ## Setup
@@ -135,6 +137,84 @@ uv run accelerate launch --mixed_precision=bf16 iREPA.py \
   --checkpoint ../../models/iREPA/SD2_SiT-L_2_gastronet.pt \
   --num_samples 16
 ```
+
+## Fine-tuning on RARE25 and OOD detection (`src/dit/iREPA_rare.py`)
+
+The unconditional iREPA checkpoint is fine-tuned as a class-conditional model on RARE25
+(`ndbe` = 0, `neo` = 1). The pretrained unconditional embedding is used as the null label for
+classifier-free guidance (index `--class_num`), and the new class embeddings are initialised from it
+(`--class_init null`, or `random`).
+
+### 1) Fine-tune from the unconditional checkpoint
+
+```bash
+cd src/dit
+uv run accelerate launch --mixed_precision=bf16 --multi_gpu --num_processes=4 iREPA_rare.py \
+  --train \
+  --img_size 256 \
+  --model SiT-L/2 \
+  --class_num 2 \
+  --vae SD2 \
+  --enc_type dinov3-vit-b16 \
+  --enc_ckpt_path ./../../models/pretrained_models/gastro_231k.pth \
+  --pretrained_checkpoint ../../models/iREPA/SD2_SiT-L_2_gastronet.pt \
+  --batch_size 32 \
+  --n_epochs 100 \
+  --snapshot 10 \
+  --sample_and_save_freq 10 \
+  --ema_decay 0.999 \
+  --lr 5e-5 \
+  --final_lr 1e-6 \
+  --num_workers 16
+```
+
+Checkpoints (EMA) are saved to `models/iREPA_rare/SD2_SiT-L_2_<run_name>_epoch<N>.pt`.
+Useful options: `--rare_balanced` (class-balanced sampling, NEO is ~5% of the data),
+`--rare_centers center_1` (train on a subset of centers), `--run_name`,
+`--checkpoint <fine-tuned.pt>` instead of `--pretrained_checkpoint` to resume.
+
+### 2) Sample per class
+
+```bash
+cd src/dit
+uv run accelerate launch --mixed_precision=bf16 iREPA_rare.py \
+  --sample \
+  --img_size 256 \
+  --model SiT-L/2 \
+  --class_num 2 \
+  --vae SD2 \
+  --checkpoint ../../models/iREPA_rare/SD2_SiT-L_2_rare_epoch100.pt \
+  --cfg 2.9 \
+  --num_samples 16
+```
+
+### 3) OOD evaluation (healthy reconstruction)
+
+Each image is slightly noised (`--ood_noise_level`, the ODE starts at `t = 1 - noise_level`),
+denoised as healthy (`--healthy_label 0`, NDBE), and the SiT features of the original and the
+reconstruction are compared (per-token cosine distance at `--ood_feat_depths`). Latent and pixel
+reconstruction errors are reported too. Runs on a single GPU.
+
+```bash
+cd src/dit
+uv run accelerate launch --mixed_precision=bf16 --num_processes=1 iREPA_rare.py \
+  --ood \
+  --img_size 256 \
+  --model SiT-L/2 \
+  --class_num 2 \
+  --vae SD2 \
+  --checkpoint ../../models/iREPA_rare/SD2_SiT-L_2_rare_epoch100.pt \
+  --healthy_label 0 \
+  --ood_noise_level 0.2 \
+  --ood_steps 10 \
+  --ood_feat_depths 4,8,12 \
+  --ood_feat_t 1.0 \
+  --cfg 2.9 \
+  --batch_size 32
+```
+
+Results are written to `reports/ood/<checkpoint>_<settings>/`: `scores.csv` (per-image scores),
+`summary.json` (AUROC per score, NEO = anomalous) and `preview.png`.
 
 ## Citation
 

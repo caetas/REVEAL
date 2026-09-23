@@ -21,7 +21,7 @@ dependencies = [
     "torchdiffeq>=0.2.5",
     "torchvision>=0.24.0",
     "transformers>=4.57.1",
-    "triton>=3.5.1",
+    "triton>=3.5.1; sys_platform == 'linux'",
     "wandb>=0.22.2",
 ]
 

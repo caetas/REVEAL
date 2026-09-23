@@ -56,6 +56,11 @@ def parse_args_iREPA():
 
     Returns an argparse.Namespace with defaults matching the project's JiT Denoiser expectations.
     """
+    return build_parser_iREPA().parse_args()
+
+
+def build_parser_iREPA():
+    """Builds the iREPA argument parser (without parsing), so other entrypoints can extend it."""
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--train", action="store_true", default=False, help="train model")
     argparser.add_argument("--sample", action="store_true", default=False, help="sample from model")
@@ -119,4 +124,4 @@ def parse_args_iREPA():
     argparser.add_argument("--outpaint", action="store_true", default=False, help="outpaint using the model")
     argparser.add_argument("--full", action="store_true", default=False, help="Train on full dataset")
     argparser.add_argument("--folder", type=str, default=None, help="Folder name for full dataset (if --full is set)")
-    return argparser.parse_args()
+    return argparser
