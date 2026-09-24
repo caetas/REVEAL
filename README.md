@@ -216,8 +216,23 @@ uv run accelerate launch --mixed_precision=bf16 --num_processes=1 iREPA_rare.py 
 ```
 
 Results are written to `reports/ood/<checkpoint>_<settings>/`: `scores.csv` (per-image scores, with
-path and hospital, taken from the filename prefix), `summary.json` (per score: AUROC and PPV at 90% recall,
-NEO = positive; change the recall with `--ood_target_recall`) and `preview.png`.
+image name, hospital (filename prefix) and path), `summary.json` (per score on the full val set: AUROC and
+PPV at 90% recall, NEO = positive; change the recall with `--ood_target_recall`) and `preview.png`.
+
+### 4) RARE25 evaluation protocol
+
+`eval_rare25.py` applies the RARE25 protocol to `scores.csv`. Each of the 1,000 repetitions keeps all NDBE
+images and samples NEO images with replacement at 1 NEO per 100 NDBE (~1% prevalence). The main score is
+the median PPV@90Recall over the repetitions. The median AUROC and AUPRC are also reported. Every score column
+uses the same NEO draws.
+
+```bash
+cd src/dit
+uv run python eval_rare25.py ../../reports/ood/<checkpoint>_<settings>/
+```
+
+The results are printed and saved to `rare25_eval.json` in the same folder. Options: `--n_reps`, `--ratio`,
+`--target_recall`, `--seed`, `--columns`.
 
 ## Citation
 

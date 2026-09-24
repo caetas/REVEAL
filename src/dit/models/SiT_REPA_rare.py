@@ -9,12 +9,12 @@ import os
 
 import accelerate
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import torch.nn.functional as F
 from config import models_dir, report_dir
 from torchvision.utils import make_grid
 from tqdm import tqdm, trange
+from utils.ood_metrics import META_COLUMNS, auroc, ppv_at_recall
 
 from .loss import SILoss
 from .SiT_REPA import DenoiserREPA, SpatialNormalization, update_ema
@@ -25,44 +25,6 @@ LABEL_TABLE_KEY = "y_embedder.embedding_table.weight"
 
 def _strip_prefix(state_dict, prefix="module."):
     return {k[len(prefix) :] if k.startswith(prefix) else k: v for k, v in state_dict.items()}
-
-
-def _auroc(scores, is_anomaly):
-    """AUROC via the Mann-Whitney U statistic (ties get average ranks). Higher score = more anomalous."""
-    scores = np.asarray(scores, dtype=np.float64)
-    is_anomaly = np.asarray(is_anomaly, dtype=bool)
-    n_pos = int(is_anomaly.sum())
-    n_neg = len(is_anomaly) - n_pos
-    if n_pos == 0 or n_neg == 0:
-        return float("nan")
-    order = np.argsort(scores, kind="mergesort")
-    _, first_idx, counts = np.unique(scores[order], return_index=True, return_counts=True)
-    ranks = np.empty(len(scores))
-    ranks[order] = np.repeat(first_idx + (counts + 1) / 2.0, counts)
-    return float((ranks[is_anomaly].sum() - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
-
-
-def _ppv_at_recall(scores, is_anomaly, target_recall=0.9):
-    """Best PPV (precision) over all thresholds whose recall is >= target_recall. A sample is predicted
-    anomalous when score >= threshold; tied scores are always on the same side of the threshold.
-    Returns (ppv, threshold, recall reached at that threshold)."""
-    scores = np.asarray(scores, dtype=np.float64)
-    is_anomaly = np.asarray(is_anomaly, dtype=bool)
-    n_pos = int(is_anomaly.sum())
-    if n_pos == 0:
-        return float("nan"), float("nan"), float("nan")
-    order = np.argsort(-scores, kind="mergesort")
-    s, y = scores[order], is_anomaly[order]
-    tp, fp = np.cumsum(y), np.cumsum(~y)
-    # only cut after the last element of each group of tied scores
-    cut = np.r_[s[1:] != s[:-1], True]
-    tp, fp, thresholds = tp[cut], fp[cut], s[cut]
-    recall = tp / n_pos
-    ppv = tp / (tp + fp)
-    valid_ppv = np.where(recall >= target_recall - 1e-12, ppv, -1.0)
-    # among equally good thresholds, report the one with the highest recall (the last one)
-    i = int(np.flatnonzero(valid_ppv == valid_ppv.max())[-1])
-    return float(ppv[i]), float(thresholds[i]), float(recall[i])
 
 
 class DenoiserREPARare(DenoiserREPA):
@@ -410,13 +372,11 @@ class DenoiserREPARare(DenoiserREPA):
                 scores["feat_cos_all_mean"] = torch.stack([scores[f"feat_cos_d{d}_mean"] for d in depths]).mean(0)
 
             for i in range(x.size(0)):
-                row = {
-                    "index": len(rows),
-                    "label": int(y[i]),
-                    "is_anomaly": int(y[i] != self.healthy_label),
-                }
+                row = {"index": len(rows)}
                 if samples is not None:
-                    row["path"], _, row["center"] = samples[row["index"]]
+                    path, _, center = samples[row["index"]]
+                    row.update(image=os.path.basename(path), center=center, path=path)
+                row.update(label=int(y[i]), is_anomaly=int(y[i] != self.healthy_label))
                 row.update({k: float(v[i]) for k, v in scores.items()})
                 rows.append(row)
 
@@ -428,15 +388,15 @@ class DenoiserREPARare(DenoiserREPA):
             writer.writeheader()
             writer.writerows(rows)
 
-        score_names = [k for k in rows[0] if k not in ("index", "label", "is_anomaly", "path", "center")]
+        score_names = [k for k in rows[0] if k not in META_COLUMNS]
         is_anomaly = [r["is_anomaly"] for r in rows]
         target = self.args.ood_target_recall
         ppv_key = f"ppv@recall{target:g}"
         metrics = {}
         for k in score_names:
             scores_k = [r[k] for r in rows]
-            ppv, threshold, recall = _ppv_at_recall(scores_k, is_anomaly, target)
-            metrics[k] = {"auroc": _auroc(scores_k, is_anomaly), ppv_key: ppv, "threshold": threshold, "recall": recall}
+            ppv, threshold, recall = ppv_at_recall(scores_k, is_anomaly, target)
+            metrics[k] = {"auroc": auroc(scores_k, is_anomaly), ppv_key: ppv, "threshold": threshold, "recall": recall}
         summary = {
             "n_samples": len(rows),
             "n_anomalous": int(sum(is_anomaly)),
