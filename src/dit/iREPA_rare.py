@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     elif args.ood:
         val_loader = get_rare_val_dataloader(
-            batch_size=args.batch_size, img_size=args.img_size, num_workers=args.num_workers
+            batch_size=args.batch_size, img_size=args.img_size, num_workers=args.num_workers, root=args.rare_val_root
         )
         model = DenoiserREPARare(args)
         model.load_checkpoint()

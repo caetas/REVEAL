@@ -32,6 +32,9 @@ def parse_args_iREPA_rare():
         "--rare_root", type=str, default=None, help="Training data root (default: data/raw/RARE25-train-data)"
     )
     group.add_argument(
+        "--rare_val_root", type=str, default=None, help="Validation data root (default: data/raw/RARE25-val-data)"
+    )
+    group.add_argument(
         "--rare_centers", type=str, default=None, help="Comma-separated centers to use, e.g. center_1 (default: all)"
     )
     group.add_argument(
@@ -70,6 +73,9 @@ def parse_args_iREPA_rare():
         help="Label used when extracting features: the unconditional (null) label or the healthy label",
     )
     group.add_argument("--ood_seed", type=int, default=0, help="Seed for the OOD noise")
+    group.add_argument(
+        "--ood_target_recall", type=float, default=0.9, help="Recall at which PPV is reported (PPV@recall)"
+    )
     group.add_argument("--ood_num_vis", type=int, default=8, help="Number of samples shown in the preview figure")
 
     args = argparser.parse_args()
@@ -82,6 +88,8 @@ def parse_args_iREPA_rare():
         argparser.error(f"--healthy_label must be in [0, {args.class_num})")
     if not 0 < args.ood_noise_level <= 1:
         argparser.error("--ood_noise_level must be in (0, 1]")
+    if not 0 < args.ood_target_recall <= 1:
+        argparser.error("--ood_target_recall must be in (0, 1]")
     if args.ood_steps < 1:
         argparser.error("--ood_steps must be >= 1")
     if not 0 < args.ood_feat_t <= 1:

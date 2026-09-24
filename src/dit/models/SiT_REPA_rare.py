@@ -42,6 +42,29 @@ def _auroc(scores, is_anomaly):
     return float((ranks[is_anomaly].sum() - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
 
 
+def _ppv_at_recall(scores, is_anomaly, target_recall=0.9):
+    """Best PPV (precision) over all thresholds whose recall is >= target_recall. A sample is predicted
+    anomalous when score >= threshold; tied scores are always on the same side of the threshold.
+    Returns (ppv, threshold, recall reached at that threshold)."""
+    scores = np.asarray(scores, dtype=np.float64)
+    is_anomaly = np.asarray(is_anomaly, dtype=bool)
+    n_pos = int(is_anomaly.sum())
+    if n_pos == 0:
+        return float("nan"), float("nan"), float("nan")
+    order = np.argsort(-scores, kind="mergesort")
+    s, y = scores[order], is_anomaly[order]
+    tp, fp = np.cumsum(y), np.cumsum(~y)
+    # only cut after the last element of each group of tied scores
+    cut = np.r_[s[1:] != s[:-1], True]
+    tp, fp, thresholds = tp[cut], fp[cut], s[cut]
+    recall = tp / n_pos
+    ppv = tp / (tp + fp)
+    valid_ppv = np.where(recall >= target_recall - 1e-12, ppv, -1.0)
+    # among equally good thresholds, report the one with the highest recall (the last one)
+    i = int(np.flatnonzero(valid_ppv == valid_ppv.max())[-1])
+    return float(ppv[i]), float(thresholds[i]), float(recall[i])
+
+
 class DenoiserREPARare(DenoiserREPA):
     def __init__(self, args):
         assert args.class_num > 0 and args.label_drop_prob > 0, "fine-tuning needs classes and a null (CFG) label"
@@ -328,7 +351,7 @@ class DenoiserREPARare(DenoiserREPA):
         For each image: encode -> noise to t0 = 1 - ood_noise_level -> denoise with the healthy label ->
         compare SiT features of the original and of the reconstruction (per-token cosine distance).
         Also reports latent and pixel reconstruction errors. Labels != --healthy_label count as anomalies.
-        Writes per-sample scores (CSV), AUROC per score (JSON) and a preview figure.
+        Writes per-sample scores (CSV), AUROC and PPV at --ood_target_recall per score (JSON) and a preview figure.
         """
         accelerator = accelerate.Accelerator()
         if accelerator.num_processes > 1:
@@ -407,10 +430,18 @@ class DenoiserREPARare(DenoiserREPA):
 
         score_names = [k for k in rows[0] if k not in ("index", "label", "is_anomaly", "path", "center")]
         is_anomaly = [r["is_anomaly"] for r in rows]
+        target = self.args.ood_target_recall
+        ppv_key = f"ppv@recall{target:g}"
+        metrics = {}
+        for k in score_names:
+            scores_k = [r[k] for r in rows]
+            ppv, threshold, recall = _ppv_at_recall(scores_k, is_anomaly, target)
+            metrics[k] = {"auroc": _auroc(scores_k, is_anomaly), ppv_key: ppv, "threshold": threshold, "recall": recall}
         summary = {
             "n_samples": len(rows),
             "n_anomalous": int(sum(is_anomaly)),
-            "auroc": {k: _auroc([r[k] for r in rows], is_anomaly) for k in score_names},
+            "target_recall": target,
+            "metrics": metrics,
             "args": vars(self.args),
         }
         with open(os.path.join(out_dir, "summary.json"), "w") as f:
@@ -419,8 +450,9 @@ class DenoiserREPARare(DenoiserREPA):
         self._save_ood_preview(*preview, depth=depths[0], path=os.path.join(out_dir, "preview.png"))
 
         print(f"OOD results saved to {out_dir}")
-        for k, v in summary["auroc"].items():
-            print(f"  AUROC {k}: {v:.4f}")
+        print(f"  {'score':<22} {'AUROC':>7} {f'PPV@{target:g}R':>9}  (prevalence {summary['n_anomalous'] / len(rows):.3f})")
+        for k, m in metrics.items():
+            print(f"  {k:<22} {m['auroc']:>7.4f} {m[ppv_key]:>9.4f}")
         return summary
 
     def _save_ood_preview(self, x_vae, x_rec, feat_map, labels, depth, path):

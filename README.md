@@ -27,6 +27,7 @@ Developing foundation generative models for endoscopy is limited by the gap betw
 - `src/jit/`: JiT training/sampling entrypoints
 - `data/raw/GastroNet-5M/`: dataset location expected by dataloaders
 - `data/raw/RARE25-train-data/`: labelled RARE25 training data (`<center>/{ndbe,neo}/*.png`) for fine-tuning
+- `data/raw/RARE25-val-data/`: labelled RARE25 validation data (`{ndbe,neo}/*.png`) for OOD evaluation
 - `models/iREPA/`: iREPA checkpoints (includes one example checkpoint)
 - `models/iREPA_rare/`: checkpoints of iREPA fine-tuned on RARE25
 - `models/pretrained_models/`: pretrained encoder/model checkpoints
@@ -193,7 +194,8 @@ uv run accelerate launch --mixed_precision=bf16 iREPA_rare.py \
 Each image is slightly noised (`--ood_noise_level`, the ODE starts at `t = 1 - noise_level`),
 denoised as healthy (`--healthy_label 0`, NDBE), and the SiT features of the original and the
 reconstruction are compared (per-token cosine distance at `--ood_feat_depths`). Latent and pixel
-reconstruction errors are reported too. Runs on a single GPU.
+reconstruction errors are reported too. Evaluation uses `data/raw/RARE25-val-data` (override with
+`--rare_val_root`). Runs on a single GPU.
 
 ```bash
 cd src/dit
@@ -213,8 +215,9 @@ uv run accelerate launch --mixed_precision=bf16 --num_processes=1 iREPA_rare.py 
   --batch_size 32
 ```
 
-Results are written to `reports/ood/<checkpoint>_<settings>/`: `scores.csv` (per-image scores),
-`summary.json` (AUROC per score, NEO = anomalous) and `preview.png`.
+Results are written to `reports/ood/<checkpoint>_<settings>/`: `scores.csv` (per-image scores, with
+path and hospital, taken from the filename prefix), `summary.json` (per score: AUROC and PPV at 90% recall,
+NEO = positive; change the recall with `--ood_target_recall`) and `preview.png`.
 
 ## Citation
 
