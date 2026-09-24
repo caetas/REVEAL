@@ -54,12 +54,6 @@ def parse_args_iREPA_rare():
         "--ood_steps", type=int, default=10, help="Number of ODE steps from t0 to 1 for the healthy reconstruction"
     )
     group.add_argument(
-        "--ood_feat_t",
-        type=float,
-        default=1.0,
-        help="Timestep at which SiT features are extracted (1.0 = clean); the same noise is used for both inputs",
-    )
-    group.add_argument(
         "--ood_feat_depths",
         type=str,
         default=None,
@@ -92,8 +86,6 @@ def parse_args_iREPA_rare():
         argparser.error("--ood_target_recall must be in (0, 1]")
     if args.ood_steps < 1:
         argparser.error("--ood_steps must be >= 1")
-    if not 0 < args.ood_feat_t <= 1:
-        argparser.error("--ood_feat_t must be in (0, 1]")
     if args.train and args.pretrained_checkpoint is None and args.checkpoint is None:
         argparser.error("--train needs --pretrained_checkpoint (unconditional) or --checkpoint (resume fine-tuning)")
     return args

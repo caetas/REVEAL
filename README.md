@@ -192,8 +192,8 @@ uv run accelerate launch --mixed_precision=bf16 iREPA_rare.py \
 ### 3) OOD evaluation (healthy reconstruction)
 
 Each image is slightly noised (`--ood_noise_level`, the ODE starts at `t = 1 - noise_level`),
-denoised as healthy (`--healthy_label 0`, NDBE), and the SiT features of the original and the
-reconstruction are compared (per-token cosine distance at `--ood_feat_depths`). Latent and pixel
+denoised as healthy (`--healthy_label 0`, NDBE), and the SiT features of the clean input and of the
+final reconstruction are compared (per-token cosine distance at `--ood_feat_depths`). Latent and pixel
 reconstruction errors are reported too. Evaluation uses `data/raw/RARE25-val-data` (override with
 `--rare_val_root`). Runs on a single GPU.
 
@@ -210,7 +210,6 @@ uv run accelerate launch --mixed_precision=bf16 --num_processes=1 iREPA_rare.py 
   --ood_noise_level 0.2 \
   --ood_steps 10 \
   --ood_feat_depths 4,8,12 \
-  --ood_feat_t 1.0 \
   --cfg 2.9 \
   --batch_size 32
 ```

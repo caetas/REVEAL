@@ -286,17 +286,13 @@ class DenoiserREPARare(DenoiserREPA):
         return z.float()
 
     @torch.no_grad()
-    def extract_features(self, z, accelerator, depths, eps=None):
-        """SiT token features [B, T, D] at the given block depths, at timestep --ood_feat_t.
-        `eps` must be shared between the inputs being compared so the noise cancels out."""
+    def extract_features(self, z, accelerator, depths):
+        """SiT token features [B, T, D] at the given block depths, for clean latents (t = 1, no noise)."""
         model = accelerator.unwrap_model(self.model)
         bsz = z.size(0)
-        t = self.args.ood_feat_t
-        if t < 1.0:
-            z = t * z + (1.0 - t) * eps
         label = self.null_label if self.args.ood_feat_label == "null" else self.healthy_label
         labels = torch.full((bsz,), label, device=z.device, dtype=torch.long)
-        tt = torch.full((bsz,), t, device=z.device, dtype=z.dtype)
+        tt = torch.ones(bsz, device=z.device, dtype=z.dtype)
         with accelerator.autocast():
             feats = model.forward_features(z, tt, labels, encoder_depths=depths, proj=False)
         return [f.float() for f in feats]
@@ -329,7 +325,7 @@ class DenoiserREPARare(DenoiserREPA):
             report_dir,
             "ood",
             f"{ckpt_name}_noise{self.args.ood_noise_level}_steps{self.args.ood_steps}_{self.method}"
-            f"_cfg{self.cfg_scale}_featt{self.args.ood_feat_t}_{self.args.ood_feat_label}",
+            f"_cfg{self.cfg_scale}_{self.args.ood_feat_label}",
         )
         os.makedirs(out_dir, exist_ok=True)
 
@@ -349,9 +345,9 @@ class DenoiserREPARare(DenoiserREPA):
                 z1 = self.encode_deterministic(x, accelerator).float()
             z_rec = self.reconstruct_healthy(z1, accelerator, generator=generator)
 
-            feat_eps = torch.randn(z1.shape, generator=generator, device=device, dtype=z1.dtype)
-            feats_orig = self.extract_features(z1, accelerator, depths, eps=feat_eps)
-            feats_rec = self.extract_features(z_rec, accelerator, depths, eps=feat_eps)
+            # clean input vs. final reconstruction
+            feats_orig = self.extract_features(z1, accelerator, depths)
+            feats_rec = self.extract_features(z_rec, accelerator, depths)
 
             with accelerator.autocast():
                 # compare against the VAE reconstruction of the original to factor out VAE error
